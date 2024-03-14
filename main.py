@@ -12,6 +12,7 @@ import gmssl.sm2 as sm2
 from base64 import b64encode, b64decode
 import traceback
 import gzip
+from tqdm import tqdm
 
 """
 加密模式：sm2非对称加密sm4密钥
@@ -182,7 +183,7 @@ class Yun_For_New:
                 self.manageList.append({
                     'point': point,
                     'marked': 'Y',
-                    'index': point_index
+                    'index': str(point_index)
                 })
                 self.add_task(point)
                 self.myLikes += 1
@@ -340,11 +341,88 @@ class Yun_For_New:
                 time.sleep(sleep_time)
             print('第' + str(task_index + 1) + '个点处理完毕！')
 
+    def do_by_points_map(self, path = './tasklist.json'):
+        with open(path, 'r', encoding='utf-8') as f:
+            self.task_map = json.loads(f.read())
+        points = []
+        count = 0
+        for point in tqdm(self.task_map['data']['pointsList'], leave=True):
+            point_changed = {
+                'point': point['point'],
+                'runStatus': '1',
+                'speed': point['speed'],
+                # 打表，为了防止格式意外，来一个格式化
+                'isFence': 'Y',
+                'isMock': False,
+                "runMileage": point['runMileage'],
+                "runTime": point['runTime']
+            }
+            points.append(point_changed)
+            count += 1
+            if count == split_count:
+                self.split_by_points_map(points)
+                sleep_time = self.task_map['data']['duration'] / len(self.task_map['data']['pointsList']) * split_count
+                print(f" 等待{sleep_time}秒.")
+                time.sleep(sleep_time)
+                count = 0
+                points = []
+        if count != 0:
+            self.split_by_points_map(points)
+            count = 0
+            points = []
+
+                
+    def split_by_points_map(self, points):
+        data = {
+            "StepNumber": int(float(points[-1]['runMileage']) - float(points[0]['runMileage'])) / self.strides,
+            'a': 0,
+            'b': None,
+            'c': None,
+            "mileage": float(points[-1]['runMileage']) - float(points[0]['runMileage']),
+            "orientationNum": 0,
+            "runSteps": random.uniform(self.raCadenceMin, self.raCadenceMax),
+            'cardPointList': points,
+            "simulateNum": 0,
+            "time": float(points[-1]['runTime']) - float(points[0]['runTime']),
+            'crsRunRecordId': self.crsRunRecordId,
+            "speeds": self.task_map['data']['recodePace'],
+            'schoolId': self.schoolId,
+            "strides": self.strides,
+            'userName': self.userName
+        }
+        resp = default_post("/run/splitPointCheating", gzip.compress(data=json.dumps(data).encode("utf-8")), isBytes=True) # 这里是特殊的接口，不清楚其他学校，但合工大的完全OK。
+        # 发送一组点
+        print('  ' + resp)
+
+    def finish_by_points_map(self):
+        print('发送结束信号...')
+        data = {
+            'recordMileage': self.task_map['data']['recordMileage'],
+            'recodeCadence': self.task_map['data']['recodeCadence'],
+            'recodePace': self.task_map['data']['recodePace'],
+            'deviceName': my_device_name,
+            'sysEdition': my_sys_edition,
+            'appEdition': my_app_edition,
+            'raIsStartPoint': 'Y',
+            'raIsEndPoint': 'Y',
+            'raRunArea': self.raRunArea,
+            'recodeDislikes': str(self.raDislikes),
+            'raId': str(self.raId),
+            'raType': self.raType,
+            'id': str(self.crsRunRecordId),
+            'duration': self.task_map['data']['duration'],
+            'recordStartTime': self.recordStartTime,
+            'manageList': self.manageList,
+            'remake': '1'
+        }
+        resp = default_post("/run/finish", json.dumps(data))
+        print(resp)
+
     def finish(self):
         print('发送结束信号...')
         data = {
             'recordMileage': format(self.now_dist / 1000, '.2f'),
-            'recodeCadence': random.randint(self.raCadenceMin, self.raCadenceMax),
+            'recodeCadence': str(random.randint(self.raCadenceMin, self.raCadenceMax)),
             'recodePace': format(self.now_time / 60 / (self.now_dist / 1000), '.2f'),
             'deviceName': my_device_name,
             'sysEdition': my_sys_edition,
@@ -352,11 +430,11 @@ class Yun_For_New:
             'raIsStartPoint': 'Y',
             'raIsEndPoint': 'Y',
             'raRunArea': self.raRunArea,
-            'recodeDislikes': self.myLikes,
-            'raId': self.raId,
+            'recodeDislikes': str(self.myLikes),
+            'raId': str(self.raId),
             'raType': self.raType,
-            'id': self.crsRunRecordId,
-            'duration': self.now_time,
+            'id': str(self.crsRunRecordId),
+            'duration': str(self.now_time),
             'recordStartTime': self.recordStartTime,
             'manageList': self.manageList,
             'remake': '1'
@@ -374,18 +452,31 @@ if __name__ == '__main__':
     print('uuid: ' + conf.get("User", "uuid"))
     print('sign: ' + conf.get("User", "sign"))
 
-    sure = input("确认：[Y/N]")
-    if sure == 'Y':
-        b = input("快速模式：[Y/N]")
-        if b == 'Y':
-            Yun = Yun_For_New()
-            Yun.start()
-            Yun.finish()
+    sure = input("确认：[y/n]")
+    try:
+        if sure == 'y':
+            print_table = input("打表模式(固定路线)：[y/n]")
+            if print_table == 'y':
+                print("默认提供的表格是翡翠湖校区的风雨操场跑步路线，\n跑步的步频、配速等信息受tasklist.json控制，而不是config.ini")
+                Yun = Yun_For_New()
+                Yun.start()
+                Yun.do_by_points_map()
+                Yun.finish_by_points_map()
+            else:
+                quick_model = input("快速模式(瞬间跑完)：[y/n]")
+                if quick_model == 'y':
+                    Yun = Yun_For_New()
+                    Yun.start()
+                    Yun.finish()
+                else:
+                    Yun = Yun_For_New()
+                    Yun.start()
+                    Yun.do()
+                    Yun.finish()
         else:
-            Yun = Yun_For_New()
-            Yun.start()
-            Yun.do()
-            Yun.finish()
-    else:
-        print("退出。")
+            print("退出。")
+    except Exception as e:
+        print("跑步失败了，错误信息：")
+        print(e)
+        input()
 
