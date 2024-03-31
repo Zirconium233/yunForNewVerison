@@ -24,9 +24,11 @@ from tqdm import tqdm
 cfg_path = "./config.ini"
 conf = configparser.ConfigParser()
 conf.read(cfg_path, encoding="utf-8")
+
 # 学校、keys和版本信息
 my_host = conf.get("Yun", "school_host") # 学校的host
 default_key = conf.get("Yun", "CipherKey") # 加密密钥
+CipherKeyEncrypted = conf.get("Yun", "CipherKeyEncrypted") # 加密密钥的sm2加密版本
 my_app_edition = conf.get("Yun", "app_edition") # app版本（我手机上是3.0.0）
 
 # 用户信息，包括设备信息
@@ -35,8 +37,11 @@ my_device_id = conf.get("User", "device_id") # 设备id （据说很随机，抓
 my_key = conf.get("User", "map_key") # map_key是高德地图的开发者密钥
 my_device_name = conf.get("User", "device_name") # 手机名称
 my_sys_edition = conf.get("User", "sys_edition") # 安卓版本（大版本）
+my_utc = conf.get("User", "utc")
+my_uuid = conf.get("User", "uuid")
+my_sign = conf.get("User", "sign")
 
-
+# 跑步相关的信息
 my_point = conf.get("Run", "point") # 当前位置
 min_distance = float(conf.get("Run", "min_distance")) # 2公里
 allow_overflow_distance = float(conf.get("Run", "allow_overflow_distance")) # 允许偏移超出的公里数
@@ -57,10 +62,12 @@ def string_to_hex(input_string):
     # 将字符串转换为十六进制表示，然后去除前缀和分隔符
     hex_string = hex(int.from_bytes(input_string.encode(), 'big'))[2:].upper()
     return hex_string
+
 def bytes_to_hex(input_string):
     # 将字符串转换为十六进制表示，然后去除前缀和分隔符
     hex_string = hex(int.from_bytes(input_string, 'big'))[2:].upper()
     return hex_string
+
 sm2_crypt = sm2.CryptSM2(public_key=bytes_to_hex(PUBLIC_KEY[1:]), private_key=bytes_to_hex(PRIVATE_KEY), mode=1, asn1=True)
 def encode_sm4(value, SM_KEY, isBytes = False):
     crypt_sm4 = CryptSM4()
@@ -70,22 +77,23 @@ def encode_sm4(value, SM_KEY, isBytes = False):
     else:
         encrypt_value = b64encode(crypt_sm4.crypt_ecb(value))
     return encrypt_value.decode()
+
 def decode_sm4(value, SM_KEY):
     crypt_sm4 = CryptSM4()
     crypt_sm4.set_key(SM_KEY, SM4_DECRYPT)
     decrypt_value = crypt_sm4.crypt_ecb(b64decode(value))
     return decrypt_value
+
+# warning：实测gmssl的sm2加密给Java Hutool解密结果不对，所以下面的2函数暂不使用
 def encrypt_sm2(info):
     encode_info = sm2_crypt.encrypt(info.encode("utf-8"))
     encode_info = b64encode(encode_info).decode()  # 将二进制bytes通过base64编码
     return encode_info
+
 def decrypt_sm2(info):
     decode_info = b64decode(info)  # 通过base64解码成二进制bytes
     decode_info = sm2_crypt.decrypt(decode_info)
     return decode_info
-
-def update():
-    conf.write(open(cfg_path, "w+", encoding="utf-8"))
 
 def default_post(router, data, headers=None, m_host=None, isBytes=False):
     if m_host is None:
@@ -93,22 +101,22 @@ def default_post(router, data, headers=None, m_host=None, isBytes=False):
     url = m_host + router
     if headers is None:
         headers = {
-            'token': conf.get("User", "token"),
+            'token': my_token,
             'isApp': 'app',
-            'deviceId': conf.get("User", "device_id"),
-            'deviceName': conf.get("User", "device_name"),
-            'version': conf.get("Yun", "app_edition"),
+            'deviceId': my_device_id,
+            'deviceName': my_device_name,
+            'version': my_app_edition,
             'platform': 'android',
             'Content-Type': 'application/json; charset=utf-8',
             'Connection': 'Keep-Alive',
             'Accept-Encoding': 'gzip',
             'User-Agent': 'okhttp/3.12.0',
-            'utc': conf.get("User", "utc"),
-            'uuid': conf.get("User", "uuid"),
-            'sign': conf.get("User", "sign")
+            'utc': my_utc,
+            'uuid': my_uuid,
+            'sign': my_sign
         }
     data_json = {
-        "cipherKey":conf.get("Yun", "CipherKeyEncrypted"),
+        "cipherKey":CipherKeyEncrypted,
         "content":encode_sm4(data, b64decode(default_key),isBytes=isBytes)
     }
     req = requests.post(url=url, data=json.dumps(data_json), headers=headers) # data进行了加密
@@ -117,10 +125,9 @@ def default_post(router, data, headers=None, m_host=None, isBytes=False):
     except:
         return req.text
 
-
 class Yun_For_New:
 
-    def __init__(self):
+    def __init__(self, auto_generate_task = True):
         data = json.loads(default_post("/run/getHomeRunInfo", ""))['data']['cralist'][0]
         self.raType = data['raType']
         self.raId = data['id']
@@ -133,47 +140,49 @@ class Yun_For_New:
         self.raSingleMileageMax = data['raSingleMileageMax'] + single_mileage_max_offset
         self.raCadenceMin = data['raCadenceMin'] + cadence_min_offset
         self.raCadenceMax = data['raCadenceMax'] + cadence_max_offset
-        points = data['points'].split('|') # points 是列表
-        self.my_select_points = ""
-        with open("./map.json") as f:
-            my_s = f.read()
-            tmp = json.loads(my_s)
-            self.my_select_points = tmp["mypoints"]
-        for my_select_point in self.my_select_points:# 手动取点
-            if my_select_point in points:
-                print(my_select_point + " 存在")
-            else:
-                print(my_select_point + " 不存在")
-                raise ValueError
-        print('开始标记打卡点...')
-        # for exclude_point in exclude_points:
-        #     try:
-        #         points.remove(exclude_point)
-        #         print("成功删除打卡点", exclude_point)
-        #     except ValueError:
-        #         print("打卡点", exclude_point, "不存在")
-        #         # 删除容易跑到学校外面的打卡点
-        # 采取手动选择点的方式
-        self.now_dist = 0
-        i = 0
-        while (self.now_dist / 1000 > min_distance + allow_overflow_distance) or self.now_dist == 0:
-            i += 1
-            print('第' + str(i) + '次尝试...')
-            self.manageList: List[Dict] = [] # 列表的每一个元素都是字典
+        points = data['points'].split('|')
+        if auto_generate_task:
+            # 如果只要打表，完全可以不执行下面初始化代码
+            self.my_select_points = ""
+            with open("./map.json") as f:
+                my_s = f.read()
+                tmp = json.loads(my_s)
+                self.my_select_points = tmp["mypoints"]
+            for my_select_point in self.my_select_points:# 手动取点
+                if my_select_point in points:
+                    print(my_select_point + " 存在")
+                else:
+                    print(my_select_point + " 不存在")
+                    raise ValueError
+            print('开始标记打卡点...')
+            # for exclude_point in exclude_points:
+            #     try:
+            #         points.remove(exclude_point)
+            #         print("成功删除打卡点", exclude_point)
+            #     except ValueError:
+            #         print("打卡点", exclude_point, "不存在")
+            #         # 删除容易跑到学校外面的打卡点
+            # # 采取手动选择点的方式，上面的放出圈方法弃用
             self.now_dist = 0
-            self.now_time = 0
-            self.task_list = []
-            self.task_count = 0
-            self.myLikes = 0
-            self.generate_task(self.my_select_points)
-        self.now_time = int(random.uniform(min_consume, max_consume) * 60 * (self.now_dist / 1000))
-        print('打卡点标记完成！本次将打卡' + str(self.myLikes) + '个点，处理' + str(len(self.task_list)) + '个点，总计'
-              + format(self.now_dist / 1000, '.2f')
-              + '公里，将耗时' + str(self.now_time // 60) + '分' + str(self.now_time % 60) + '秒')
-        # 这三个只是初始化，并非最终值
-        self.recordStartTime = ''
-        self.crsRunRecordId = 0
-        self.userName = ''
+            i = 0
+            while (self.now_dist / 1000 > min_distance + allow_overflow_distance) or self.now_dist == 0:
+                i += 1
+                print('第' + str(i) + '次尝试...')
+                self.manageList: List[Dict] = [] # 列表的每一个元素都是字典
+                self.now_dist = 0
+                self.now_time = 0
+                self.task_list = []
+                self.task_count = 0
+                self.myLikes = 0
+                self.generate_task(self.my_select_points)
+            self.now_time = int(random.uniform(min_consume, max_consume) * 60 * (self.now_dist / 1000))
+            print('打卡点标记完成！本次将打卡' + str(self.myLikes) + '个点，处理' + str(len(self.task_list)) + '个点，总计'
+                + format(self.now_dist / 1000, '.2f')
+                + '公里，将耗时' + str(self.now_time // 60) + '分' + str(self.now_time % 60) + '秒')
+            # 这三个只是初始化，并非最终值
+            self.recordStartTime = ''
+            self.crsRunRecordId = 0
+            self.userName = ''
 
     def generate_task(self, points):
         # random_points = random.sample(points, self.raDislikes) # 在打卡点随机选raDislike个点
@@ -444,21 +453,22 @@ class Yun_For_New:
 
 if __name__ == '__main__':
 
-    print("确定数据无误：[Y/N]")
-    print("Token: " + conf.get("User", "token"))
-    print('deviceId: ' + conf.get("User", "device_id"))
-    print('deviceName: ' +  conf.get("User", "device_name"))
-    print('utc: ' + conf.get("User", "utc"))
-    print('uuid: ' + conf.get("User", "uuid"))
-    print('sign: ' + conf.get("User", "sign"))
+    print("确定数据无误：")
+    print("Token: ".ljust(15) + my_token)
+    print('deviceId: '.ljust(15) + my_device_id)
+    print('deviceName: '.ljust(15) +  my_device_name)
+    print('utc: '.ljust(15) + my_utc)
+    print('uuid: '.ljust(15) + my_uuid)
+    print('sign: '.ljust(15) + my_sign)
+    print('map_key: '.ljust(15) + my_key)
 
     sure = input("确认：[y/n]")
     try:
         if sure == 'y':
-            print_table = input("打表模式(固定路线)：[y/n]")
+            print_table = input("打表模式(固定路线，无需高德地图key)：[y/n]")
             if print_table == 'y':
-                print("默认提供的表格是翡翠湖校区的风雨操场跑步路线，\n跑步的步频、配速等信息受tasklist.json控制，而不是config.ini")
-                Yun = Yun_For_New()
+                print("warning:\n默认提供的表格是翡翠湖校区的风雨操场跑步路线，\n跑步的步频、配速等信息受tasklist.json控制，不会读取map.json，config.ini的跑步信息失效")
+                Yun = Yun_For_New(auto_generate_task=False)
                 Yun.start()
                 Yun.do_by_points_map()
                 Yun.finish_by_points_map()
