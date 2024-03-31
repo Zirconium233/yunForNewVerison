@@ -42,7 +42,7 @@ my_uuid = conf.get("User", "uuid")
 my_sign = conf.get("User", "sign")
 
 # 跑步相关的信息
-my_point = conf.get("Run", "point") # 当前位置
+# my_point = conf.get("Run", "point") # 当前位置，取消，改到map.json
 min_distance = float(conf.get("Run", "min_distance")) # 2公里
 allow_overflow_distance = float(conf.get("Run", "allow_overflow_distance")) # 允许偏移超出的公里数
 single_mileage_min_offset = float(conf.get("Run", "single_mileage_min_offset")) # 单次配速偏移最小
@@ -148,6 +148,7 @@ class Yun_For_New:
                 my_s = f.read()
                 tmp = json.loads(my_s)
                 self.my_select_points = tmp["mypoints"]
+                self.my_point = tmp["origin_point"]
             for my_select_point in self.my_select_points:# 手动取点
                 if my_select_point in points:
                     print(my_select_point + " 存在")
@@ -206,6 +207,7 @@ class Yun_For_New:
                 # 多余的点
         # 如果跑完了表都不够
         if self.now_dist / 1000 < min_distance:
+            print("跑完了一圈关键点，长度仍然不够，会自动回跑绕圈圈")
             print('公里数不足' + str(min_distance) + '公里，将自动回跑...')
             index = 0
             while self.now_dist / 1000 < min_distance:
@@ -217,7 +219,7 @@ class Yun_For_New:
     # 若最后一组只有1个（这种情况只会发生在len(splitPoints) > 0），则将已插入的最后一组splitPoint的最后一个点替换为最后一组的点
     def add_task(self, point): # add_ task 传一个点，开始跑
         if not self.task_list:
-            origin = my_point
+            origin = self.my_point
         else:
             origin = self.task_list[-1]['originPoint'] # 列表的-1项当起始点
         data = {
@@ -371,7 +373,7 @@ class Yun_For_New:
             if count == split_count:
                 self.split_by_points_map(points)
                 sleep_time = self.task_map['data']['duration'] / len(self.task_map['data']['pointsList']) * split_count
-                print(f" 等待{sleep_time}秒.")
+                print(f" 等待{sleep_time:.2f}秒.")
                 time.sleep(sleep_time)
                 count = 0
                 points = []
@@ -415,13 +417,13 @@ class Yun_For_New:
             'raIsStartPoint': 'Y',
             'raIsEndPoint': 'Y',
             'raRunArea': self.raRunArea,
-            'recodeDislikes': str(self.raDislikes),
+            'recodeDislikes': str(self.task_map['data']['recodeDislikes']),
             'raId': str(self.raId),
             'raType': self.raType,
             'id': str(self.crsRunRecordId),
             'duration': self.task_map['data']['duration'],
             'recordStartTime': self.recordStartTime,
-            'manageList': self.manageList,
+            'manageList': self.task_map['data']['manageList'],
             'remake': '1'
         }
         resp = default_post("/run/finish", json.dumps(data))
@@ -480,6 +482,7 @@ if __name__ == '__main__':
                     Yun.finish()
                 else:
                     Yun = Yun_For_New()
+                    print("起始点：[" + Yun.my_point + ']')
                     Yun.start()
                     Yun.do()
                     Yun.finish()
