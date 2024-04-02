@@ -69,7 +69,7 @@ def bytes_to_hex(input_string):
     return hex_string
 
 sm2_crypt = sm2.CryptSM2(public_key=bytes_to_hex(PUBLIC_KEY[1:]), private_key=bytes_to_hex(PRIVATE_KEY), mode=1, asn1=True)
-def encode_sm4(value, SM_KEY, isBytes = False):
+def encrypt_sm4(value, SM_KEY, isBytes = False):
     crypt_sm4 = CryptSM4()
     crypt_sm4.set_key(SM_KEY, SM4_ENCRYPT)
     if not isBytes:
@@ -78,7 +78,7 @@ def encode_sm4(value, SM_KEY, isBytes = False):
         encrypt_value = b64encode(crypt_sm4.crypt_ecb(value))
     return encrypt_value.decode()
 
-def decode_sm4(value, SM_KEY):
+def decrypt_sm4(value, SM_KEY):
     crypt_sm4 = CryptSM4()
     crypt_sm4.set_key(SM_KEY, SM4_DECRYPT)
     decrypt_value = crypt_sm4.crypt_ecb(b64decode(value))
@@ -117,11 +117,11 @@ def default_post(router, data, headers=None, m_host=None, isBytes=False):
         }
     data_json = {
         "cipherKey":CipherKeyEncrypted,
-        "content":encode_sm4(data, b64decode(default_key),isBytes=isBytes)
+        "content":encrypt_sm4(data, b64decode(default_key),isBytes=isBytes)
     }
     req = requests.post(url=url, data=json.dumps(data_json), headers=headers) # data进行了加密
     try:
-        return decode_sm4(req.text, b64decode(default_key)).decode()
+        return decrypt_sm4(req.text, b64decode(default_key)).decode()
     except:
         return req.text
 
@@ -316,7 +316,7 @@ class Yun_For_New:
             self.recordStartTime = j['data']['recordStartTime']
             self.crsRunRecordId = j['data']['id']
             self.userName = j['data']['studentId']
-            print("云运动任务创建成功！")
+            print("云运动任务创建成功！\n")
 
     def split(self, points):
         data = {
@@ -352,8 +352,17 @@ class Yun_For_New:
                 time.sleep(sleep_time)
             print('第' + str(task_index + 1) + '个点处理完毕！')
 
-    def do_by_points_map(self, path = './tasklist.json'):
-        with open(path, 'r', encoding='utf-8') as f:
+    def do_by_points_map(self, path = './tasks'):
+        files = os.listdir(path)
+        files.sort()
+        print("检测到可用表格：[输入-1随机选择，输入序号选择对应task]")
+        print(files)
+        choice = int(input("选择："))
+        if choice == -1:
+            file = os.path.join(path, random.choice(files))
+        else:
+            file = os.path.join(path, files[choice])
+        with open(file, 'r', encoding='utf-8') as f:
             self.task_map = json.loads(f.read())
         points = []
         count = 0
