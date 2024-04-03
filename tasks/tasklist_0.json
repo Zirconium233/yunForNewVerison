@@ -2,7 +2,6 @@
     "msg": "操作成功",
     "code": 200,
     "data": {
-        "raId": 36,
         "recordMileage": 2.21,
         "recodePace": 7.86,
         "recodeCadence": 132,
