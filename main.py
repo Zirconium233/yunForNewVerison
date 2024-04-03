@@ -352,16 +352,20 @@ class Yun_For_New:
                 time.sleep(sleep_time)
             print('第' + str(task_index + 1) + '个点处理完毕！')
 
-    def do_by_points_map(self, path = './tasks'):
+    def do_by_points_map(self, path = './tasks', random_choose = False):
         files = os.listdir(path)
         files.sort()
-        print("检测到可用表格：[输入-1随机选择，输入序号选择对应task]")
-        print(files)
-        choice = int(input("选择："))
-        if choice == -1:
-            file = os.path.join(path, random.choice(files))
+        if not random_choose:
+            print("检测到可用表格：[输入-1随机选择，输入序号选择对应task]")
+            print(files)
+            choice = int(input("选择："))
+            if choice == -1:
+                file = os.path.join(path, random.choice(files))
+            else:
+                file = os.path.join(path, files[choice])
         else:
-            file = os.path.join(path, files[choice])
+            file = os.path.join(path, random.choice(files))
+            print("随机选择：" + file)
         with open(file, 'r', encoding='utf-8') as f:
             self.task_map = json.loads(f.read())
         points = []
