@@ -12,6 +12,16 @@
 
 ### 更新记录：
 
+1. 2024/5/3：更新随机提速脚本，用python复现了[Ma-minghao/Yunyundong (github.com)](https://github.com/Ma-minghao/Yunyundong)，因为原作者说python不熟...
+
+   <img src="./image/paceChanger.png" alt="image" style="zoom:50%;" />
+
+1. 2024/5/2：更新了一个小工具，用java实现了端到端的解密，[Source code](https://github.com/Zirconium233/JavaSmDecryptToy)，各位再也不用麻烦费事的找在线解密网页了。
+
+   <img src="./image/javaTool.png" alt="image" style="zoom:50%;" />
+
+   
+
 1. 2024/4/3：更新多图随机打表模式，现在可以随机选择多套图中的一套来跑步了，同时也更新了定时系统，现在可以直接输入时间，自动随机选图打表。
 
 1. 2024/3/31：更新main.py，现在打表模式再也不需要高德地图key了。顺便给了一个计数器工具，帮助各位自动7:30晨跑(但是你还是要支付电脑放一夜的电费)
@@ -78,10 +88,14 @@
 
 - **简介：**给了一个定时器，默认是3秒一检查，直接点开输入时间就是每天7.30执行跑步代码。不过时间的格式是: "hh:mm"，比如写"07:30"而不是"7:30"。
 
+**更新--java解密小工具，专门用于解包：**
+
+- **简介：**如果你有java，双击打开`./tools/decrypt_java.jar`就行了*(jdk-17.0.9)*。
+
 **其他校区或者学校要额外配置：**
 
 1. 抓历史跑步记录包，云运动点开任意一次的跑步记录(可以是上学期的)，抓取返回的response body。
-2. 解密密钥，解密返回CipherKey(sm2)，因为gmssl和Java验签的问题，这个解密不能用提供的decode_sm2函数，要用Java的`cn.hutool`包(云运动用的加密库就是这个)，不会Java也没关系，[SM2 - 在线工具 (toolhelper.cn)](https://www.toolhelper.cn/AsymmetricEncryption/SM2)给你找了一个网站可以解密成功(这种工具网站都是前端计算，不用担心数据泄露，况且这是云运动的密钥泄露不关我事【逃)，公钥和私钥在config.ini里面，模式选c1c3c2。
+2. 解密密钥，解密返回CipherKey(sm2)，因为gmssl和Java验签的问题，这个解密不能用提供的decode_sm2函数，要用Java的`cn.hutool`包，公钥和私钥在config.ini里面有，模式选c1c3c2。(云运动用的加密库就是这个)。(更新)我用java实现了一个解密小工具，在`./tools/decrypt_java.jar`，各位有java直接双击执行就可以了。
 3. 解密数据，用解密的密钥作为key，用我脚本里面的decode_sm4解密或者你也用工具网站解密都行，解密的内容就是历史跑步记录的信息了(一整个大的json体，特别长，100+kb)，包括路径点。
 4. 拷贝到tasklist_{x=1,2,3...example}.json，把解密的整个json拷贝过来就行，不用你提取data部分，返回值200等信息我知道没用，但给大家方便点，直接解密的json整个拷贝过来到tasklist.json就行了。这其中大多数信息是用不上的，是跑步者的个人信息，不过你不删也无所谓。(我提供的当然删个人信息了，别想害我【其实是损友的)
 5. 跑代码，我自己跑的是没问题的，如果跑不起来多检查一下，这教程也不是写给纯小白看的，各位看懂报错信息Debug一下应该不是难事。
@@ -98,11 +112,12 @@
 
 7. **更多细节：**
 
-  1. 现在默认跑步是用`tasklist.json`的点了。本校区是无脑用的。(如果要改成自定义的点，把finish_by_points_map函数里面`'manageList': self.task_map['data']['manageList']`改成`'manageList': self.manageList,`就行了)
-  2. 配速、里程等信息不受config.ini控制了，看的是tasklist.json，如果要用原来的，代码里面把调用的`finish_by_points_map()`改成`finish()`就行，不过路线和里程速度对不上。(无路线都给过，你怕什么)
-  3. 进度条显示用了tqdm库，我安装的库太多了，已经不知道这是不是自带的库了，所以也写到了requirements.txt里面，如果出现什么错误，删了就行。
-  4. 现在打表模式完全不需要高德地图key了，不过各位应该都有了。
-  5. 附：我这个脚本主要是给各位提供一个代跑方案，给出新版本密钥，main.py是一个我的实现，封装没怎么做，但细节解释的很详细，你完全可以照着自定义成你的脚本，实现你自己想要的功能(比如issue里面的场馆预定，抓包找规律就行了，其实是搬砖活【滑稽)
+  8. 现在默认跑步是用`tasklist.json`的点了。本校区是无脑用的。(如果要改成自定义的点，把finish_by_points_map函数里面`'manageList': self.task_map['data']['manageList']`改成`'manageList': self.manageList,`就行了)
+  9. 配速、里程等信息不受config.ini控制了，看的是tasklist.json，如果要用原来的，代码里面把调用的`finish_by_points_map()`改成`finish()`就行，不过路线和里程速度对不上。(无路线都给过，你怕什么)
+  10. 注意：`tasklist_i.json`要连续且从0开始，要不然可能有问题。
+  11. 进度条显示用了tqdm库，我安装的库太多了，已经不知道这是不是自带的库了，所以也写到了requirements.txt里面，如果出现什么错误，删了就行。
+  12. 现在打表模式完全不需要高德地图key了，不过各位应该都有了。
+  13. 附：我这个脚本主要是给各位提供一个代跑方案，给出新版本密钥，main.py是一个我的实现，封装没怎么做，但细节解释的很详细，你完全可以照着自定义成你的脚本，实现你自己想要的功能(比如issue里面的场馆预定，抓包找规律就行了，其实是搬砖活【滑稽)
 
 **补充抓包教学：**
 

@@ -361,6 +361,7 @@ class Yun_For_New:
             choice = int(input("选择："))
             if choice == -1:
                 file = os.path.join(path, random.choice(files))
+                print("随机选择：" + file)
             else:
                 file = os.path.join(path, files[choice])
         else:
