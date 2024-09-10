@@ -4,10 +4,14 @@
 
 详见 [issue#15](https://github.com/Zirconium233/yunForNewVerison/issues/15#issue-2514321467)
 
-这个脚本最后一次更新已经是4个月前了，在更新前不能保证最新版本不会有问题。
-- 如果云运动不强制更新版本，那么锁死发包版本在3.0.0可能不会有事。但是安全起见，在这个仓库更新前最好别使用。
-- 整体加密逻辑没变，发包逻辑就完全是抓包和服务器玩躲猫猫了，属于赛博搬砖活，难度不大但比较耗时间，我有空会(随缘)更新。
-- 如果你比较急，可以自己抓包对照新版本发包逻辑修改代码，如果搞定了，欢迎提PR。
+- 官方锁死3.3.1版本，旧版本不给用了。
+- 已经给points添加时间戳ts的数据，并且可以通过`splitPointCheating`接口的作弊检测。
+   <img src="./image/points.png" alt="image" style="zoom:50%;" />
+- finish包目前还没有测试，因为学校还没有调整跑步日期，现在跑步仍然要求2024-02-26到2024-07-07，但是名字已经换成大二了，等官方调整吧。
+   - 错误原因：
+   <img src="./image/issue_15_time.png" alt="image" style="zoom:50%;" />
+   - 本学期`getHomeRunInfo`的要求的穿越时空跑步行为：
+   <img src="./image/chronologicalBug.png" alt="image" style="zoom:50%;" />
 
 ### 简介：
 
@@ -23,21 +27,23 @@
 
 ### 更新记录：
 
-1. 2024/5/3：更新随机提速脚本，用python复现了[Ma-minghao/Yunyundong (github.com)](https://github.com/Ma-minghao/Yunyundong)，因为原作者说python不熟...
+- 2024/9/10：给points添加了时间戳数据，目前已经通过splitPointCheating接口测试，finish包还没过测试(神tm要求大二在2月到7月跑步，穿越时空是吧，看上去学校忘记调时间了)
+
+- 2024/5/3：更新随机提速脚本，用python复现了[Ma-minghao/Yunyundong (github.com)](https://github.com/Ma-minghao/Yunyundong)，因为原作者说python不熟...
 
    <img src="./image/paceChanger.png" alt="image" style="zoom:50%;" />
 
-1. 2024/5/2：更新了一个小工具，用java实现了端到端的解密，[Source code](https://github.com/Zirconium233/JavaSmDecryptToy)，各位再也不用麻烦费事的找在线解密网页了。
+- 2024/5/2：更新了一个小工具，用java实现了端到端的解密，[Source code](https://github.com/Zirconium233/JavaSmDecryptToy)，各位再也不用麻烦费事的找在线解密网页了。
 
    <img src="./image/javaTool.png" alt="image" style="zoom:50%;" />
 
    
 
-1. 2024/4/3：更新多图随机打表模式，现在可以随机选择多套图中的一套来跑步了，同时也更新了定时系统，现在可以直接输入时间，自动随机选图打表。
+- 2024/4/3：更新多图随机打表模式，现在可以随机选择多套图中的一套来跑步了，同时也更新了定时系统，现在可以直接输入时间，自动随机选图打表。
 
-1. 2024/3/31：更新main.py，现在打表模式再也不需要高德地图key了。顺便给了一个计数器工具，帮助各位自动7:30晨跑(但是你还是要支付电脑放一夜的电费)
+- 2024/3/31：更新main.py，现在打表模式再也不需要高德地图key了。顺便给了一个计数器工具，帮助各位自动7:30晨跑(但是你还是要支付电脑放一夜的电费)
 
-1. 2024/3/14：添加打表模式，修复路径问题。(可惜finish返回500的问题还是没解决，不过不影响用，就是看着难受)
+- 2024/3/14：添加打表模式，修复路径问题。(可惜finish返回500的问题还是没解决，不过不影响用，就是看着难受)
 
    <img src="./image/goodMap.jpg" alt="image" style="zoom:50%;" />
 

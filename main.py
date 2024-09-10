@@ -4,6 +4,7 @@ import time
 import requests
 import json
 import configparser
+import hashlib
 import os
 from typing import List, Dict
 from gmssl.sm4 import CryptSM4, SM4_ENCRYPT, SM4_DECRYPT
@@ -58,6 +59,9 @@ strides = float(conf.get("Run", "strides"))
 PUBLIC_KEY = b64decode(conf.get("Yun", "PublicKey"))
 PRIVATE_KEY = b64decode(conf.get("Yun", "PrivateKey"))
 
+md5key = conf.get("Yun", "md5key")
+platform = conf.get("Yun", "platform")
+
 def string_to_hex(input_string):
     # 将字符串转换为十六进制表示，然后去除前缀和分隔符
     hex_string = hex(int.from_bytes(input_string.encode(), 'big'))[2:].upper()
@@ -95,10 +99,28 @@ def decrypt_sm2(info):
     decode_info = sm2_crypt.decrypt(decode_info)
     return decode_info
 
-def default_post(router, data, headers=None, m_host=None, isBytes=False):
+def getsign(utc, uuid):
+    sb = (
+        "platform="
+        + platform
+        + "&utc="
+        + str(utc)
+        + "&uuid="
+        + str(uuid)
+        + "&appsecret="
+        + md5key
+    )
+    m = hashlib.md5()
+    m.update(sb.encode("utf-8"))
+    return m.hexdigest()
+
+def default_post(router, data, headers=None, m_host=None, isBytes=False, gen_sign=True):
     if m_host is None:
         m_host = my_host
     url = m_host + router
+    if gen_sign:
+        my_utc = str(int(time.time()))
+    sign = getsign(my_utc, my_uuid) if gen_sign else my_sign
     if headers is None:
         headers = {
             'token': my_token,
@@ -113,7 +135,7 @@ def default_post(router, data, headers=None, m_host=None, isBytes=False):
             'User-Agent': 'okhttp/3.12.0',
             'utc': my_utc,
             'uuid': my_uuid,
-            'sign': my_sign
+            'sign': sign
         }
     data_json = {
         "cipherKey":CipherKeyEncrypted,
@@ -124,6 +146,7 @@ def default_post(router, data, headers=None, m_host=None, isBytes=False):
         return decrypt_sm4(req.text, b64decode(default_key)).decode()
     except:
         return req.text
+
 
 class Yun_For_New:
 
@@ -380,7 +403,8 @@ class Yun_For_New:
                 'isFence': 'Y',
                 'isMock': False,
                 "runMileage": point['runMileage'],
-                "runTime": point['runTime']
+                "runTime": point['runTime'],
+                "ts": str(int(time.time()))
             }
             points.append(point_changed)
             count += 1
