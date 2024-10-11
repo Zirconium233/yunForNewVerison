@@ -1,6 +1,7 @@
 #自动获取token等信息，点进跑步信息自动保存跑步记录tasklist
 #安装mitmproxy 运行mitmproxy -s proxy.py
 #手机代理设置为电脑ip:8080
+import os
 import mitmproxy
 import json
 import subprocess
@@ -43,6 +44,18 @@ class Yun:
     saved = False
     count = 0
 
+    def __init__(self):
+        self.count = self.get_tasks_else_file_count()
+
+    def get_tasks_else_file_count(self):
+        tasks_else_path = "./tasks_else"
+        try:
+            file_count = len([name for name in os.listdir(tasks_else_path) if os.path.isfile(os.path.join(tasks_else_path, name))])
+        except FileNotFoundError:
+            os.mkdir(tasks_else_path)
+            file_count = 0
+        return file_count
+    
     def request(flow: mitmproxy.http.HTTPFlow) -> None:
         if "210.45.246.53:8080" not in flow.request.pretty_url:
             flow.live = False
@@ -84,7 +97,7 @@ class Yun:
                             del point['ts']
                 filtered_data = {key: value for key, value in data.items() if key in fields_to_keep}
                 tasklist_json['data'] = filtered_data
-                with open(f"tasklist_{self.count}.json", 'w', encoding='utf-8') as file:
+                with open(f"./tasks_else/tasklist_{self.count}.json", 'w', encoding='utf-8') as file:
                     json.dump(tasklist_json, file, ensure_ascii=False, indent=4)
                 self.count = self.count + 1
         else:
