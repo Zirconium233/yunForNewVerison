@@ -507,10 +507,14 @@ if __name__ == '__main__':
         if sure == 'y':
             print_table = input("打表模式(固定路线，无需高德地图key)：[y/n]")
             if print_table == 'y':
-                print("warning:\n默认提供的表格是翡翠湖校区的风雨操场跑步路线，\n跑步的步频、配速等信息受tasklist.json控制，不会读取map.json，config.ini的跑步信息失效")
+                print("warning:\n打表模式下\n跑步的步频、配速等信息受tasklist.json控制，不会读取map.json，config.ini的跑步信息失效")
+                choice = input("请选择校区（1.翡翠湖校区,2.屯溪路校区,3.自定义）")
+                if(choice == '1'): path = "./tasks_fch"
+                elif(choice == '2'): path = "./tasks_txl"
+                else: path = "./tasks_else"
                 Yun = Yun_For_New(auto_generate_task=False)
                 Yun.start()
-                Yun.do_by_points_map()
+                Yun.do_by_points_map(path=path)
                 Yun.finish_by_points_map()
             else:
                 quick_model = input("快速模式(瞬间跑完)：[y/n]")

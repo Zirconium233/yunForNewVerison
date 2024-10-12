@@ -36,6 +36,8 @@ def change_all(path_dir, target_speed:str):
         change_pace(os.path.join(path_dir, file), target_speed)
 
 if __name__ == "__main__":
+    pos_choice = input("你需要修改哪一个校区tasklist？(1.翡翠湖 2.屯溪路)")
+    path = "./tasks_fch" if(pos_choice == "1") else "./tasks_txl"
     choice = input("你需要修改哪一个tasklist？(All or index)")
     speed = input("你要的配速是多少分钟？(示例：4.5， 输入random在[4.5-5.5]随机)")
     try:
@@ -45,10 +47,10 @@ if __name__ == "__main__":
         else:
             speed_f = round(float(speed), 2)
         if choice == 'All':
-            change_all("./tasks", speed)
+            change_all(path, speed)
         else:
             chi = int(choice)
-            change_pace(f"./tasks/tasklist_{chi}.json", speed_f)
+            change_pace(f"{path}/tasklist_{chi}.json", speed_f)
 
     except Exception as e:
         print("错误")
