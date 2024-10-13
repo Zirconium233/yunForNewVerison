@@ -541,7 +541,7 @@ if __name__ == '__main__':
                     Yun = Yun_For_New(auto_generate_task=False)
                     Yun.start()
                     Yun.do_by_points_map(path=path, random_choose=True)
-                    Yun.finish()
+                    Yun.finish_by_points_map()
             else:
                 quick_model = input("快速模式(瞬间跑完)：[y/n]")
                 if quick_model == 'y':
