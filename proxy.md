@@ -1,6 +1,6 @@
 # 一.准备
 
-1.安装好java。本地测试的版本信息为openjdk 17.0.11 2024-04-16
+1.安装好java。本地测试的版本信息为openjdk 17.0.11 2024-04-16 (PS:用openjdk,用oracle解密时会报错)
 
 2.安装好mitmproxy [官网]([mitmproxy - an interactive HTTPS proxy](https://mitmproxy.org/))
 
