@@ -33,6 +33,7 @@ def parse_args():
     parser.add_argument('-f', '--config_path', type=str, default='./config.ini', help='配置文件路径')
     parser.add_argument('-t', '--task_path', type=str, default='./tasks_fch', help='任务文件路径')
     parser.add_argument('-a', '--auto_run', action='store_true', help='自动跑步，默认打表')
+    parser.add_argument('-d', '--drift', action='store_true', help='是否添加漂移')
     return parser.parse_args()
 
 def string_to_hex(input_string):
@@ -121,7 +122,7 @@ def default_post(router, data, headers=None, m_host=None, isBytes=False, gen_sig
         return req.text
 
 
-class Drift:
+class Drift(isDrift = False):
     def LoadJson(path):
         with open(path, 'r', encoding='utf-8') as file:
             json_str = file.read()
@@ -152,38 +153,27 @@ class Drift:
     #Chatgpt真好用啊#
 
 def DriftMain(FilePath):
-        print("是否对当前选中tasklist进行少量偏移？")
-        driftchoice = input("y/n")
-        if driftchoice == 'y':
-
-            drift = random.uniform(-0.000000001, 0.000000001)
-            lonData, latData = Drift.LoadJson(FilePath)
-
-            for index in range(len(lonData)):
-                lonData[index] += drift
-            for index in range(len(latData)):
-                latData[index] += drift
-
-        #计算总距离
-            Distance = 0.0
-            for index in range(len(lonData) - 1):
-                Distance += Drift.haversine_distance(latData[index], lonData[index], latData[index + 1], lonData[index + 1])
-            Distance = round(Distance / 10) / 100
-        # 生成修改后的坐标列表
-            ChangedData = [f"{lon},{lat}" for lon, lat in zip(lonData, latData)]
-
-            with open(FilePath, 'r+', encoding='utf-8') as f:
-                jsondata = json.load(f)
-                for i in range(min(len(ChangedData), len(jsondata['data']['pointsList']))):
-                    jsondata['data']['pointsList'][i]['point'] = ChangedData[i]
-                jsondata['data']['recordMileage'] = Distance
-                # 重置文件指针并写回修改后的 JSON 数据
-                f.seek(0)
-                json.dump(jsondata, f, indent=4, ensure_ascii=False)
-                f.truncate()  
-        else:
-            return 0
-            
+        drift = random.uniform(-0.000000001, 0.000000001)
+        lonData, latData = Drift.LoadJson(FilePath)
+        for index in range(len(lonData)):
+            lonData[index] += drift
+        for index in range(len(latData)):
+            latData[index] += drift
+    #计算总距离
+        Distance = 0.0
+        for index in range(len(lonData) - 1):
+            Distance += Drift.haversine_distance(latData[index], lonData[index], latData[index + 1], lonData[index + 1])
+        Distance = round(Distance / 10) / 100
+    # 生成修改后的坐标列表
+        ChangedData = [f"{lon},{lat}" for lon, lat in zip(lonData, latData)]
+        with open(FilePath, 'r+', encoding='utf-8') as f:
+            jsondata = json.load(f)
+            for i in range(min(len(ChangedData), len(jsondata['data']['pointsList']))):
+                jsondata['data']['pointsList'][i]['point'] = ChangedData[i]
+            jsondata['data']['recordMileage'] = Distance
+            # 重置文件指针并写回修改后的 JSON 数据
+            f.seek(0)
+        return jsondata    
 
 
 class Yun_For_New:
@@ -413,7 +403,7 @@ class Yun_For_New:
                 time.sleep(sleep_time)
             print('第' + str(task_index + 1) + '个点处理完毕！')
 
-    def do_by_points_map(self, path = './tasks', random_choose = False):
+    def do_by_points_map(self, path = './tasks', random_choose = False, isDrift = False):
         files = os.listdir(path)
         files.sort()
         if not random_choose:
@@ -428,9 +418,12 @@ class Yun_For_New:
         else:
             file = os.path.join(path, random.choice(files))
             print("随机选择：" + file)
-        DriftMain(file)
-        with open(file, 'r', encoding='utf-8') as f:
-            self.task_map = json.loads(f.read())
+        if isDrift:
+            jsondata = DriftMain(file)
+            self.task_map = jsondata
+        else:
+            with open(file, 'r', encoding='utf-8') as f:
+                self.task_map = json.loads(f.read())
         points = []
         count = 0
         for point in tqdm(self.task_map['data']['pointsList'], leave=True):
@@ -599,15 +592,18 @@ if __name__ == '__main__':
                     if(choice == '1'): path = "./tasks_fch"
                     elif(choice == '2'): path = "./tasks_txl"
                     else: path = "./tasks_else"
+                    isDrift = input("是否为数据添加漂移：[y/n]")
+                    if isDrift == 'y':
+                        DriftChoice = True
                     Yun = Yun_For_New(auto_generate_task=False)
                     Yun.start()
-                    Yun.do_by_points_map(path=path)
+                    Yun.do_by_points_map(path=path, isDrift=DriftChoice)
                     Yun.finish_by_points_map()
                 else:
                     path = args.task_path
                     Yun = Yun_For_New(auto_generate_task=False)
                     Yun.start()
-                    Yun.do_by_points_map(path=path, random_choose=True)
+                    Yun.do_by_points_map(path=path, random_choose=True, isDrift=args.drift)
                     Yun.finish_by_points_map()
             else:
                 quick_model = input("快速模式(瞬间跑完)：[y/n]")
