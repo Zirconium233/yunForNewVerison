@@ -122,59 +122,53 @@ def default_post(router, data, headers=None, m_host=None, isBytes=False, gen_sig
         return req.text
 
 
-class Drift(isDrift = False):
-    def LoadJson(path):
-        with open(path, 'r', encoding='utf-8') as file:
-            json_str = file.read()
-
-        data = json.loads(json_str)
+class Drift:
+    @staticmethod
+    def LoadJson(data):
         lonData = []
         latData = []
 
         # 遍历 pointsList 中的每一个点
         for point in data['data']['pointsList']:
-            point_str = point['point']  
-            lon, lat = map(float, point_str.split(','))  
+            point_str = point['point']
+            lon, lat = map(float, point_str.split(','))
             lonData.append(lon)
             latData.append(lat)
-
         return lonData, latData
-    
+
     # 计算两点之间的距离（使用 Haversine 公式）
+    @staticmethod
     def haversine_distance(lat1, lon1, lat2, lon2):
-        EARTH_RADIUS = 6371000 #地球半径 用于计算两点间距离
+        EARTH_RADIUS = 6371000  # 地球半径 用于计算两点间距离
         lat1, lon1, lat2, lon2 = map(math.radians, [lat1, lon1, lat2, lon2])
         dlat = lat2 - lat1
         dlon = lon2 - lon1
         a = math.sin(dlat / 2) ** 2 + math.cos(lat1) * math.cos(lat2) * math.sin(dlon / 2) ** 2
         c = 2 * math.asin(math.sqrt(a))
         Distance = EARTH_RADIUS * c
-        return  Distance
-    #Chatgpt真好用啊#
+        return Distance
 
-def DriftMain(FilePath):
-        drift = random.uniform(-0.000000001, 0.000000001)
-        lonData, latData = Drift.LoadJson(FilePath)
-        for index in range(len(lonData)):
-            lonData[index] += drift
-        for index in range(len(latData)):
-            latData[index] += drift
-    #计算总距离
-        Distance = 0.0
-        for index in range(len(lonData) - 1):
-            Distance += Drift.haversine_distance(latData[index], lonData[index], latData[index + 1], lonData[index + 1])
-        Distance = round(Distance / 10) / 100
+def DriftMain(data):
+    drift = random.uniform(-0.000000001, 0.000000001)
+    lonData, latData = Drift.LoadJson(data)
+    for index in range(len(lonData)):
+        lonData[index] += drift
+    for index in range(len(latData)):
+        latData[index] += drift
+
+    # 计算总距离
+    Distance = 0.0
+    for index in range(len(lonData) - 1):
+        Distance += Drift.haversine_distance(latData[index], lonData[index], latData[index + 1], lonData[index + 1])
+    Distance = round(Distance / 10) / 100
+
     # 生成修改后的坐标列表
-        ChangedData = [f"{lon},{lat}" for lon, lat in zip(lonData, latData)]
-        with open(FilePath, 'r+', encoding='utf-8') as f:
-            jsondata = json.load(f)
-            for i in range(min(len(ChangedData), len(jsondata['data']['pointsList']))):
-                jsondata['data']['pointsList'][i]['point'] = ChangedData[i]
-            jsondata['data']['recordMileage'] = Distance
-            # 重置文件指针并写回修改后的 JSON 数据
-            f.seek(0)
-        return jsondata    
+    ChangedData = [f"{lon},{lat}" for lon, lat in zip(lonData, latData)]
+    for i in range(min(len(ChangedData), len(data['data']['pointsList']))):
+        data['data']['pointsList'][i]['point'] = ChangedData[i]
+    data['data']['recordMileage'] = Distance
 
+    return data
 
 class Yun_For_New:
 
@@ -403,7 +397,7 @@ class Yun_For_New:
                 time.sleep(sleep_time)
             print('第' + str(task_index + 1) + '个点处理完毕！')
 
-    def do_by_points_map(self, path = './tasks', random_choose = False, isDrift = False):
+    def do_by_points_map(self, path = '.\tasks', random_choose = False, isDrift = False):
         files = os.listdir(path)
         files.sort()
         if not random_choose:
@@ -418,12 +412,12 @@ class Yun_For_New:
         else:
             file = os.path.join(path, random.choice(files))
             print("随机选择：" + file)
+        with open(file, 'r', encoding='utf-8') as f:
+            JsonDataOrig = json.load(f)
         if isDrift:
-            jsondata = DriftMain(file)
-            self.task_map = jsondata
+            self.task_map = DriftMain(JsonDataOrig)
         else:
-            with open(file, 'r', encoding='utf-8') as f:
-                self.task_map = json.loads(f.read())
+            self.task_map = json.load(JsonDataOrig)
         points = []
         count = 0
         for point in tqdm(self.task_map['data']['pointsList'], leave=True):
