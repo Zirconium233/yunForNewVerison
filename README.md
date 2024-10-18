@@ -11,7 +11,7 @@
    2. 有人测试发现ios版本也可以直接抓包token和deviceId，uuid使用当前代码，虽然很逆天但是真的过了。(还是不建议使用iOS登录信息跑本脚本)
 
 - 2024/10/12: 
-   1. 合并ANormalDD代码，提供屯溪路校区地图和自动抓包(配置教程见proxy.md)支持。
+   1. 合并ANormalDD代码，提供屯溪路校区地图和自动抓包(配置教程见[proxy.md](./proxy.md))支持。
 
    2. 允许传递参数执行`main.py`，提供`./tools/EasyAutoRunServer/run.sh`批量并行运行多个config的任务，配合crontab即可定时批量运行跑步任务(挂一个云服务器上就可以全自动)。
 
