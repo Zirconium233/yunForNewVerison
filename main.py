@@ -539,6 +539,8 @@ if __name__ == '__main__':
                     isDrift = input("是否为数据添加漂移：[y/n]")
                     if isDrift == 'y':
                         driftChoice = True
+                    else:
+                        driftChoice = False
                     Yun = Yun_For_New(auto_generate_task=False)
                     Yun.start()
                     Yun.do_by_points_map(path=path, isDrift=driftChoice)
