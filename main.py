@@ -16,6 +16,7 @@ import traceback
 import gzip
 from tqdm import tqdm
 import argparse
+from tools.drift import add_drift
 
 """
 加密模式：sm2非对称加密sm4密钥
@@ -120,55 +121,6 @@ def default_post(router, data, headers=None, m_host=None, isBytes=False, gen_sig
         return decrypt_sm4(req.text, b64decode(default_key)).decode()
     except:
         return req.text
-
-
-class Drift:
-    @staticmethod
-    def LoadJson(data):
-        lonData = []
-        latData = []
-
-        # 遍历 pointsList 中的每一个点
-        for point in data['data']['pointsList']:
-            point_str = point['point']
-            lon, lat = map(float, point_str.split(','))
-            lonData.append(lon)
-            latData.append(lat)
-        return lonData, latData
-
-    # 计算两点之间的距离（使用 Haversine 公式）
-    @staticmethod
-    def haversine_distance(lat1, lon1, lat2, lon2):
-        EARTH_RADIUS = 6371000  # 地球半径 用于计算两点间距离
-        lat1, lon1, lat2, lon2 = map(math.radians, [lat1, lon1, lat2, lon2])
-        dlat = lat2 - lat1
-        dlon = lon2 - lon1
-        a = math.sin(dlat / 2) ** 2 + math.cos(lat1) * math.cos(lat2) * math.sin(dlon / 2) ** 2
-        c = 2 * math.asin(math.sqrt(a))
-        Distance = EARTH_RADIUS * c
-        return Distance
-
-def DriftMain(data):
-    drift = random.uniform(-0.000000001, 0.000000001)
-    lonData, latData = Drift.LoadJson(data)
-    for index in range(len(lonData)):
-        lonData[index] += drift
-    for index in range(len(latData)):
-        latData[index] += drift
-
-    # 计算总距离
-    Distance = 0.0
-    for index in range(len(lonData) - 1):
-        Distance += Drift.haversine_distance(latData[index], lonData[index], latData[index + 1], lonData[index + 1])
-    Distance = round(Distance / 10) / 100
-
-    # 生成修改后的坐标列表
-    ChangedData = [f"{lon},{lat}" for lon, lat in zip(lonData, latData)]
-    for i in range(min(len(ChangedData), len(data['data']['pointsList']))):
-        data['data']['pointsList'][i]['point'] = ChangedData[i]
-    data['data']['recordMileage'] = Distance
-
-    return data
 
 class Yun_For_New:
 
@@ -413,11 +365,9 @@ class Yun_For_New:
             file = os.path.join(path, random.choice(files))
             print("随机选择：" + file)
         with open(file, 'r', encoding='utf-8') as f:
-            JsonDataOrig = json.load(f)
+            self.task_map = json.loads(f.read())
         if isDrift:
-            self.task_map = DriftMain(JsonDataOrig)
-        else:
-            self.task_map = json.load(JsonDataOrig)
+            self.task_map = add_drift(self.task_map)
         points = []
         count = 0
         for point in tqdm(self.task_map['data']['pointsList'], leave=True):
@@ -588,10 +538,10 @@ if __name__ == '__main__':
                     else: path = "./tasks_else"
                     isDrift = input("是否为数据添加漂移：[y/n]")
                     if isDrift == 'y':
-                        DriftChoice = True
+                        driftChoice = True
                     Yun = Yun_For_New(auto_generate_task=False)
                     Yun.start()
-                    Yun.do_by_points_map(path=path, isDrift=DriftChoice)
+                    Yun.do_by_points_map(path=path, isDrift=driftChoice)
                     Yun.finish_by_points_map()
                 else:
                     path = args.task_path
