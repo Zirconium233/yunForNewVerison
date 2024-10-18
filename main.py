@@ -1,4 +1,5 @@
 import base64
+import math
 import random
 import time
 import requests
@@ -32,6 +33,7 @@ def parse_args():
     parser.add_argument('-f', '--config_path', type=str, default='./config.ini', help='配置文件路径')
     parser.add_argument('-t', '--task_path', type=str, default='./tasks_fch', help='任务文件路径')
     parser.add_argument('-a', '--auto_run', action='store_true', help='自动跑步，默认打表')
+    parser.add_argument('-d', '--drift', action='store_true', help='是否添加漂移')
     return parser.parse_args()
 
 def string_to_hex(input_string):
@@ -119,6 +121,54 @@ def default_post(router, data, headers=None, m_host=None, isBytes=False, gen_sig
     except:
         return req.text
 
+
+class Drift:
+    @staticmethod
+    def LoadJson(data):
+        lonData = []
+        latData = []
+
+        # 遍历 pointsList 中的每一个点
+        for point in data['data']['pointsList']:
+            point_str = point['point']
+            lon, lat = map(float, point_str.split(','))
+            lonData.append(lon)
+            latData.append(lat)
+        return lonData, latData
+
+    # 计算两点之间的距离（使用 Haversine 公式）
+    @staticmethod
+    def haversine_distance(lat1, lon1, lat2, lon2):
+        EARTH_RADIUS = 6371000  # 地球半径 用于计算两点间距离
+        lat1, lon1, lat2, lon2 = map(math.radians, [lat1, lon1, lat2, lon2])
+        dlat = lat2 - lat1
+        dlon = lon2 - lon1
+        a = math.sin(dlat / 2) ** 2 + math.cos(lat1) * math.cos(lat2) * math.sin(dlon / 2) ** 2
+        c = 2 * math.asin(math.sqrt(a))
+        Distance = EARTH_RADIUS * c
+        return Distance
+
+def DriftMain(data):
+    drift = random.uniform(-0.000000001, 0.000000001)
+    lonData, latData = Drift.LoadJson(data)
+    for index in range(len(lonData)):
+        lonData[index] += drift
+    for index in range(len(latData)):
+        latData[index] += drift
+
+    # 计算总距离
+    Distance = 0.0
+    for index in range(len(lonData) - 1):
+        Distance += Drift.haversine_distance(latData[index], lonData[index], latData[index + 1], lonData[index + 1])
+    Distance = round(Distance / 10) / 100
+
+    # 生成修改后的坐标列表
+    ChangedData = [f"{lon},{lat}" for lon, lat in zip(lonData, latData)]
+    for i in range(min(len(ChangedData), len(data['data']['pointsList']))):
+        data['data']['pointsList'][i]['point'] = ChangedData[i]
+    data['data']['recordMileage'] = Distance
+
+    return data
 
 class Yun_For_New:
 
@@ -347,7 +397,7 @@ class Yun_For_New:
                 time.sleep(sleep_time)
             print('第' + str(task_index + 1) + '个点处理完毕！')
 
-    def do_by_points_map(self, path = './tasks', random_choose = False):
+    def do_by_points_map(self, path = '.\tasks', random_choose = False, isDrift = False):
         files = os.listdir(path)
         files.sort()
         if not random_choose:
@@ -363,7 +413,11 @@ class Yun_For_New:
             file = os.path.join(path, random.choice(files))
             print("随机选择：" + file)
         with open(file, 'r', encoding='utf-8') as f:
-            self.task_map = json.loads(f.read())
+            JsonDataOrig = json.load(f)
+        if isDrift:
+            self.task_map = DriftMain(JsonDataOrig)
+        else:
+            self.task_map = json.load(JsonDataOrig)
         points = []
         count = 0
         for point in tqdm(self.task_map['data']['pointsList'], leave=True):
@@ -532,15 +586,18 @@ if __name__ == '__main__':
                     if(choice == '1'): path = "./tasks_fch"
                     elif(choice == '2'): path = "./tasks_txl"
                     else: path = "./tasks_else"
+                    isDrift = input("是否为数据添加漂移：[y/n]")
+                    if isDrift == 'y':
+                        DriftChoice = True
                     Yun = Yun_For_New(auto_generate_task=False)
                     Yun.start()
-                    Yun.do_by_points_map(path=path)
+                    Yun.do_by_points_map(path=path, isDrift=DriftChoice)
                     Yun.finish_by_points_map()
                 else:
                     path = args.task_path
                     Yun = Yun_For_New(auto_generate_task=False)
                     Yun.start()
-                    Yun.do_by_points_map(path=path, random_choose=True)
+                    Yun.do_by_points_map(path=path, random_choose=True, isDrift=args.drift)
                     Yun.finish_by_points_map()
             else:
                 quick_model = input("快速模式(瞬间跑完)：[y/n]")
