@@ -349,7 +349,7 @@ class Yun_For_New:
                 time.sleep(sleep_time)
             print('第' + str(task_index + 1) + '个点处理完毕！')
 
-    def do_by_points_map(self, path = '.\tasks', random_choose = False, isDrift = False):
+    def do_by_points_map(self, path = './tasks', random_choose = False, isDrift = False):
         files = os.listdir(path)
         files.sort()
         if not random_choose:
