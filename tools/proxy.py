@@ -1,5 +1,5 @@
 #自动获取token等信息，点进跑步信息自动保存跑步记录tasklist
-#安装mitmproxy 运行mitmweb -s proxy2.py
+#安装mitmproxy 运行mitmweb -s proxy.py
 #手机代理设置为电脑ip:8080
 #这个会自动创建新的config_studentnumber.ini
 import os
