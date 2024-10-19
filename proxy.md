@@ -12,11 +12,6 @@
 
 > mitmweb -p 8080 -s proxy.py
 
-或者
-
-> mitmweb -p 8080 -s proxy2.py
-
-( proxy2.py 可以自动创建新的 .ini 文件)
 
 3.配置手机代理，这里为了避免一些遇到过的神奇问题，我们使用软件代理的形式
 
