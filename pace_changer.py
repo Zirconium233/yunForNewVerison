@@ -1,7 +1,6 @@
 import json
 import os
 import random
-
 def change_pace(path, target_speed:float):
     print("当前处理：" + path)
     print("目标配速：" + str(target_speed))
@@ -37,9 +36,8 @@ def change_all(path_dir, target_speed:str):
         change_pace(os.path.join(path_dir, file), target_speed)
 
 if __name__ == "__main__":
-    os.chdir(os.path.dirname(__file__))
     pos_choice = input("你需要修改哪一个校区tasklist？(1.翡翠湖 2.屯溪路 3.其他)")
-    path = "../tasks_fch" if pos_choice == "1" else "../tasks_txl" if pos_choice == "2" else "../tasks_else"
+    path = "./tasks_fch" if pos_choice == "1" else "./tasks_txl" if pos_choice == "2" else "./tasks_else"
     choice = input("你需要修改哪一个tasklist？(All or index)")
     speed = input("你要的配速是多少分钟？(示例：4.5， 输入random在[4.5-5.5]随机)")
     try:

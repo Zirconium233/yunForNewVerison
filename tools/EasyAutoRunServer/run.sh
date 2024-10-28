@@ -1,9 +1,9 @@
 #!/bin/bash
 
 # TODO: change the path to your own path
-cd /path/to/yunForNewVerison/tools/EasyAutoRunServer
-source /home/path_to/miniconda3/etc/profile.d/conda.sh
-conda activate env
+cd /home/zhangran/desktop/test_background_task/new_yun/yunForNewVerison/tools/EasyAutoRunServer
+source /home/zhangran/miniconda3/etc/profile.d/conda.sh
+conda activate py310
 
 pid_file="./log/pid.txt"
 echo "start" > $pid_file 

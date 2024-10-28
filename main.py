@@ -1,5 +1,4 @@
 import base64
-import math
 import random
 import time
 import requests
@@ -16,7 +15,6 @@ import traceback
 import gzip
 from tqdm import tqdm
 import argparse
-from tools.drift import add_drift
 
 """
 加密模式：sm2非对称加密sm4密钥
@@ -34,7 +32,6 @@ def parse_args():
     parser.add_argument('-f', '--config_path', type=str, default='./config.ini', help='配置文件路径')
     parser.add_argument('-t', '--task_path', type=str, default='./tasks_fch', help='任务文件路径')
     parser.add_argument('-a', '--auto_run', action='store_true', help='自动跑步，默认打表')
-    parser.add_argument('-d', '--drift', action='store_true', help='是否添加漂移')
     return parser.parse_args()
 
 def string_to_hex(input_string):
@@ -121,6 +118,7 @@ def default_post(router, data, headers=None, m_host=None, isBytes=False, gen_sig
         return decrypt_sm4(req.text, b64decode(default_key)).decode()
     except:
         return req.text
+
 
 class Yun_For_New:
 
@@ -349,7 +347,7 @@ class Yun_For_New:
                 time.sleep(sleep_time)
             print('第' + str(task_index + 1) + '个点处理完毕！')
 
-    def do_by_points_map(self, path = './tasks', random_choose = False, isDrift = False):
+    def do_by_points_map(self, path = './tasks', random_choose = False):
         files = os.listdir(path)
         files.sort()
         if not random_choose:
@@ -366,8 +364,6 @@ class Yun_For_New:
             print("随机选择：" + file)
         with open(file, 'r', encoding='utf-8') as f:
             self.task_map = json.loads(f.read())
-        if isDrift:
-            self.task_map = add_drift(self.task_map)
         points = []
         count = 0
         for point in tqdm(self.task_map['data']['pointsList'], leave=True):
@@ -536,20 +532,15 @@ if __name__ == '__main__':
                     if(choice == '1'): path = "./tasks_fch"
                     elif(choice == '2'): path = "./tasks_txl"
                     else: path = "./tasks_else"
-                    isDrift = input("是否为数据添加漂移：[y/n]")
-                    if isDrift == 'y':
-                        driftChoice = True
-                    else:
-                        driftChoice = False
                     Yun = Yun_For_New(auto_generate_task=False)
                     Yun.start()
-                    Yun.do_by_points_map(path=path, isDrift=driftChoice)
+                    Yun.do_by_points_map(path=path)
                     Yun.finish_by_points_map()
                 else:
                     path = args.task_path
                     Yun = Yun_For_New(auto_generate_task=False)
                     Yun.start()
-                    Yun.do_by_points_map(path=path, random_choose=True, isDrift=args.drift)
+                    Yun.do_by_points_map(path=path, random_choose=True)
                     Yun.finish_by_points_map()
             else:
                 quick_model = input("快速模式(瞬间跑完)：[y/n]")
