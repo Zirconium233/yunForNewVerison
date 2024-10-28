@@ -124,7 +124,7 @@ class Yun:
                 config = configparser.ConfigParser()
                 parentDirPath=os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
                 config_file_path=parentDirPath+f"/tools/EasyAutoRunSever/configs/config_{stu_number}.ini"
-                default_config_file_path=parentDirPath+'/tools/EasyAutoRunServer/configs/config_default.ini'
+                default_config_file_path=parentDirPath+'/config.ini'
                 # print(config_file_path)
                 # print(default_config_file_path)
                 try:
