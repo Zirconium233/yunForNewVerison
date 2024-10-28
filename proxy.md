@@ -1,16 +1,17 @@
 # 一.准备
 
-1.安装好java。本地测试的版本信息为openjdk 17.0.11 2024-04-16
+1.安装好java。本地测试的版本信息为openjdk 17.0.11 2024-04-16 (PS:用openjdk,用oracle解密时会报错)
 
 2.安装好mitmproxy [官网]([mitmproxy - an interactive HTTPS proxy](https://mitmproxy.org/))
 
 # 二.抓包
 
-1.使得手机和电脑处于同一局域网下，可以手机开热点，然后电脑连接手机热点。
+1.使得手机和电脑处于同一局域网下，可以手机开热点，然后电脑连接手机热点。（windows系统防火墙记得关）
 
 2.运行脚本
 
 > mitmweb -p 8080 -s proxy.py
+
 
 3.配置手机代理，这里为了避免一些遇到过的神奇问题，我们使用软件代理的形式
 
