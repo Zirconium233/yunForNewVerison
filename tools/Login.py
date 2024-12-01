@@ -6,8 +6,10 @@ import base64
 import requests
 from Crypto.Util.Padding import pad, unpad
 import json
+import configparser
 
 SM4_BLOCK_SIZE = 16
+conf = configparser.ConfigParser()
 
 class Login():
     def md5_encryption(data):
@@ -65,25 +67,58 @@ class Login():
         #if padding == 'Pkcs7':
             #plaintext = pkcs7_unpadding(plaintext)
         return plaintext.decode()
-    def main(username, password, my_uuid, DeviceName):
+    def main():
+
         utc = int(time.time())
-        uuid= my_uuid   
+
+        #读取ini
+        conf.read('./config.ini', encoding='utf-8')
+        username = conf.get('Login', 'username')
+        password = conf.get('Login', 'password')
+        iniDeviceId = conf.get('User', 'device_id')
+        iniDeviceName = conf.get('User', 'device_name')
+        iniuuid = conf.get('User', 'uuid')
+        iniSysedition = conf.get('User', 'sys_edition')
+        appedition = conf.get('Yun', 'app_edition')
+        url = conf.get('Yun', 'school_host') + '/login/appLoginHGD'
+        platform = conf.get('Yun', 'platform')
+        schoolid = conf.get('Yun', 'school_id')
+
+        #如果部分配置为空则随机生成
+        if iniDeviceId != '':
+            DeviceId = iniDeviceId
+        else:
+            DeviceId = str(random.randint(1000000000000000, 9999999999999999))
+
+        if iniuuid != '':
+            uuid = iniuuid
+        else:
+            uuid = DeviceId
+        
+        if iniDeviceName != '':
+            DeviceName = iniDeviceName
+        else:
+            DeviceName = 'Xiaomi'
+        
+        if iniSysedition != '':
+            sys_edition = iniSysedition
+        else:
+            sys_edition = '14'
         #md5签名结果用hex
-        encryptData='''{"password":"'''+password+'''","schoolId":"100","userName":"'''+username+'''","type":"1"}'''
+        encryptData = '{"password":"' + password + '","schoolId":' + schoolid + ',"userName":"' + username + '","type":"1"}'
         #签名结果
         sign_data='platform=android&utc={}&uuid={}&appsecret=pie0hDSfMRINRXc7s1UIXfkE'.format(utc,uuid)
         sign=Login.md5_encryption(sign_data)
         key='e2c9e15e84f93b81ee01bbd299a31563'
         content=Login.sm4_encrypt(encryptData, key, mode='ECB', padding='Pkcs7', output_format='Base64')
         content=content[:-24]
-        url = "http://210.45.246.53:8080/login/appLoginHGD"
         headers = {
             "token": "",
             "isApp": "app",
             "deviceId": uuid,
             "deviceName": DeviceName,
-            "version": "3.4.5",
-            "platform": "android",
+            "version": appedition,
+            "platform": platform,
             "uuid": uuid,
             "utc": str(utc),
             "sign": sign,
@@ -102,5 +137,7 @@ class Login():
         result=response.text
         DecryptedData=json.loads(Login.sm4_decrypt(result,key, mode='ECB', padding='Pkcs7',input_format='Base64'))
         token=DecryptedData['data']['token']
-        uuid = str(random.randint(1000000000000000, 9999999999999999))
-        return token
+        if response.status_code == 200:
+            print("登录成功，本次登录尝试获得的token为：" + token + "  本次生成的uuid为：" + uuid)
+            print("!请注意! 使用脚本登录后会导致手机客户端登录失效\n请尽量减少手机登录次数，避免被识别为多设备登录代跑")
+        return token,DeviceId,DeviceName,uuid,sys_edition

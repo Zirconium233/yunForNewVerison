@@ -128,39 +128,25 @@ def default_post(router, data, headers=None, m_host=None, isBytes=False, gen_sig
     except:
         return req.text
 
-def noTokenLogin(my_token,my_device_id,my_device_name,my_sys_edition,my_uuid):
+def noTokenLogin():
     print("config中token为空，是否尝试使用账号密码登录？(y/n)")
     LoginChoice = input()
     if LoginChoice == 'y':
+        token,DeviceId,DeviceName,uuid,sys_edition = Login.main()
         #TEST CONTENT
-        if len(my_sys_edition) == 0:
-            my_sys_edition = 13
-        else:
-            my_sys_edition = conf.get('User', 'sys_edition')
-        if len(my_uuid) == 0:
-            my_uuid = str(random.randint(1000000000000000, 9999999999999999))
-            my_device_id = my_uuid
-        else:
-            my_uuid = conf.get('User', 'uuid')
-            my_device_id = conf.get('User', 'device_Id')
-        if len(my_device_name) == 0:
-            my_device_name = 'Xiaomi'
-        utc = int(time.time())
-        username = conf.get("Login", "username")
-        password = conf.get("Login", "password")
-        my_token = Login.main(username, password, my_uuid, my_device_name)
-        print("登录成功，本次登录尝试获得的token为：" + my_token + "  本次生成的uuid为：" + my_uuid)
         print("是否保存本次登录产生的token和uuid？(y/n)")
         TokenWrite = input()
         if TokenWrite == 'y':
             config = configparser.ConfigParser()
             config.read('config.ini', encoding='utf-8')
-            config.set('User', 'token', my_token)
-            config.set('User', 'uuid', my_uuid)
-            config.set('User', 'device_id', my_device_id)
-            with open('config.ini', 'w', encoding='utf-8') as f:
+            config.set('User', 'token', token)
+            config.set('User', 'uuid', uuid)
+            config.set('User', 'device_id', DeviceId)
+            config.set('User', 'device_name', DeviceName)
+            config.set('User', 'sys_edition', sys_edition)
+            with open('config.ini', 'w+', encoding='utf-8') as f:
                 config.write(f)
-        return my_token, my_uuid, my_device_id
+        return token,DeviceId,DeviceName,uuid,sys_edition
     elif LoginChoice == 'n':
         print("由于缺少token退出")
         exit()
@@ -535,9 +521,6 @@ if __name__ == '__main__':
     my_device_id = my_uuid
     my_sign = conf.get("User", "sign")
 
-    if len(conf.get('User', 'token')) == 0:
-        my_token,my_uuid,my_device_id = noTokenLogin(my_token,my_device_id,my_device_name,my_sys_edition,my_uuid)
-
     # 跑步相关的信息
     # my_point = conf.get("Run", "point") # 当前位置，取消，改到map.json
     min_distance = float(conf.get("Run", "min_distance")) # 2公里
@@ -558,6 +541,8 @@ if __name__ == '__main__':
     md5key = conf.get("Yun", "md5key")
     platform = conf.get("Yun", "platform")
     if not args.auto_run:
+        if len(conf.get('User', 'token')) == 0:
+            my_token,my_device_id,my_device_name,my_uuid,my_sys_edition = noTokenLogin()
         print("确定数据无误：")
     print("Token: ".ljust(15) + my_token)
     print('deviceId: '.ljust(15) + my_device_id)
