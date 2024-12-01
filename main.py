@@ -41,6 +41,18 @@ def parse_args():
     parser.add_argument('-d', '--drift', action='store_true', help='是否添加漂移')
     return parser.parse_args()
 
+def string_to_hex(input_string):
+    # 将字符串转换为十六进制表示，然后去除前缀和分隔符
+    hex_string = hex(int.from_bytes(input_string.encode(), 'big'))[2:].upper()
+    return hex_string
+
+def bytes_to_hex(input_string):
+    # 将字符串转换为十六进制表示，然后去除前缀和分隔符
+    hex_string = hex(int.from_bytes(input_string, 'big'))[2:].upper()
+    return hex_string
+
+sm2_crypt = sm2.CryptSM2(public_key=bytes_to_hex(PUBLIC_KEY[1:]), private_key=bytes_to_hex(PRIVATE_KEY), mode=1, asn1=True)
+
 def encrypt_sm4(value, SM_KEY, isBytes = False):
     crypt_sm4 = CryptSM4()
     crypt_sm4.set_key(SM_KEY, SM4_ENCRYPT)
@@ -55,7 +67,18 @@ def decrypt_sm4(value, SM_KEY):
     crypt_sm4.set_key(SM_KEY, SM4_DECRYPT)
     decrypt_value = crypt_sm4.crypt_ecb(b64decode(value))
     return decrypt_value
-#original code above
+
+# warning：实测gmssl的sm2加密给Java Hutool解密结果不对，所以下面的2函数暂不使用
+def encrypt_sm2(info):
+    encode_info = sm2_crypt.encrypt(info.encode("utf-8"))
+    encode_info = b64encode(encode_info).decode()  # 将二进制bytes通过base64编码
+    return encode_info
+
+def decrypt_sm2(info):
+    decode_info = b64decode(info)  # 通过base64解码成二进制bytes
+    decode_info = sm2_crypt.decrypt(decode_info)
+    return decode_info
+
 
 def getsign(utc, uuid):
     sb = (
@@ -104,6 +127,43 @@ def default_post(router, data, headers=None, m_host=None, isBytes=False, gen_sig
         return decrypt_sm4(req.text, b64decode(default_key)).decode()
     except:
         return req.text
+
+def noTokenLogin(my_token,my_device_id,my_device_name,my_sys_edition,my_uuid):
+    print("config中token为空，是否尝试使用账号密码登录？(y/n)")
+    LoginChoice = input()
+    if LoginChoice == 'y':
+        #TEST CONTENT
+        if len(my_sys_edition) == 0:
+            my_sys_edition = 13
+        else:
+            my_sys_edition = conf.get('User', 'sys_edition')
+        if len(my_uuid) == 0:
+            my_uuid = str(random.randint(1000000000000000, 9999999999999999))
+            my_device_id = my_uuid
+        else:
+            my_uuid = conf.get('User', 'uuid')
+            my_device_id = conf.get('User', 'device_Id')
+        if len(my_device_name) == 0:
+            my_device_name = 'Xiaomi'
+        utc = int(time.time())
+        username = conf.get("Login", "username")
+        password = conf.get("Login", "password")
+        my_token = Login.main(username, password, my_uuid, my_device_name)
+        print("登录成功，本次登录尝试获得的token为：" + my_token + "  本次生成的uuid为：" + my_uuid)
+        print("是否保存本次登录产生的token和uuid？(y/n)")
+        TokenWrite = input()
+        if TokenWrite == 'y':
+            config = configparser.ConfigParser()
+            config.read('config.ini', encoding='utf-8')
+            config.set('User', 'token', my_token)
+            config.set('User', 'uuid', my_uuid)
+            config.set('User', 'device_id', my_device_id)
+            with open('config.ini', 'w', encoding='utf-8') as f:
+                config.write(f)
+        return my_token, my_uuid, my_device_id
+    elif LoginChoice == 'n':
+        print("由于缺少token退出")
+        exit()
 
 class Yun_For_New:
 
@@ -476,30 +536,7 @@ if __name__ == '__main__':
     my_sign = conf.get("User", "sign")
 
     if len(conf.get('User', 'token')) == 0:
-        print("config中token为空，是否尝试使用账号密码登录？(y/n)")
-        choice = input()
-        if choice == 'y':
-            #TEST CONTENT
-            utc = int(time.time())
-            username = conf.get("Login", "username")
-            password = conf.get("Login", "password")
-            my_token = Login.main(username, password, my_uuid, my_device_name)
-            if len(my_sys_edition) == 0:
-                my_sys_edition = 13
-            else:
-                my_sys_edition = conf.get('User', 'sys_edition')
-            if len(my_uuid) == 0:
-                my_uuid = str(random.randint(1000000000000000, 9999999999999999))
-                my_device_id = my_uuid
-            else:
-                my_uuid = conf.get('User', 'uuid')
-                my_device_id = conf.get('User', 'device_Id')
-            if len(my_device_name) == 0:
-                my_device_name = 'Xiaomi'
-            print("登录成功，本次登录尝试获得的token为：" + my_token + "  本次生成的uuid为：" + my_uuid)
-        elif choice == 'n':
-            print("由于缺少token退出")
-            exit()
+        my_token,my_uuid,my_device_id = noTokenLogin(my_token,my_device_id,my_device_name,my_sys_edition,my_uuid)
 
     # 跑步相关的信息
     # my_point = conf.get("Run", "point") # 当前位置，取消，改到map.json
