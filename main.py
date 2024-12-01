@@ -564,9 +564,10 @@ if __name__ == '__main__':
             if print_table == 'y':
                 if not args.auto_run:
                     print("warning:\n打表模式下\n跑步的步频、配速等信息受tasklist.json控制，不会读取map.json，config.ini的跑步信息失效")
-                    choice = input("请选择校区（1.翡翠湖校区,2.屯溪路校区,3.自定义）")
+                    choice = input("请选择校区（1.翡翠湖校区,2.屯溪路校区,3.宣城校区,4.自定义(文件夹tasks_else)）")
                     if(choice == '1'): path = "./tasks_fch"
                     elif(choice == '2'): path = "./tasks_txl"
+                    elif(choice == '3') : path = "./tasks_xc"
                     else: path = "./tasks_else"
                     isDrift = input("是否为数据添加漂移：[y/n]")
                     if isDrift == 'y':
