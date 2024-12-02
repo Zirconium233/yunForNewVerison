@@ -68,11 +68,27 @@ class Login():
             #plaintext = pkcs7_unpadding(plaintext)
         return plaintext.decode()
     def main():
-
+        
         utc = int(time.time())
 
         #读取ini
         conf.read('./config.ini', encoding='utf-8')
+
+        #判断[Login]是否存在
+        if 'Login' not in conf.sections():
+            conf.add_section('Login')
+            conf.set('Login', 'username', '')
+            conf.set('Login', 'password', '')
+            with open('./config.ini', 'w', encoding='utf-8') as f:
+                conf.write(f)
+        
+        #判断school_id是否在[Yun]中
+        if 'school_id' not in conf['Yun']:
+            conf.set('Yun', 'school_id', '100')
+            with open('./config.ini', 'w', encoding='utf-8') as f:
+                conf.write(f)
+        
+        #读取ini配置
         username = conf.get('Login', 'username') or input('未找到用户名，请输入用户名：')
         password = conf.get('Login', 'password') or input('未找到密码，请输入密码：')
         iniDeviceId = conf.get('User', 'device_id')

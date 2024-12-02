@@ -506,8 +506,8 @@ if __name__ == '__main__':
 
     # 学校、keys和版本信息
     my_host = conf.get("Yun", "school_host") # 学校的host
-    default_key = conf.get("Yun", "CipherKey") # 加密密钥
-    CipherKeyEncrypted = conf.get("Yun", "CipherKeyEncrypted") # 加密密钥的sm2加密版本
+    default_key = conf.get("Yun", "cipherkey") # 加密密钥
+    CipherKeyEncrypted = conf.get("Yun", "cipherkeyencrypted") # 加密密钥的sm2加密版本
     my_app_edition = conf.get("Yun", "app_edition") # app版本（我手机上是3.0.0）
 
     # 用户信息，包括设备信息
@@ -542,6 +542,13 @@ if __name__ == '__main__':
     if not args.auto_run:
         if len(conf.get('User', 'token')) == 0:
             my_token,my_device_id,my_device_name,my_uuid,my_sys_edition = noTokenLogin()
+
+        if conf.get('Yun', 'app_edition') != '3.4.5':
+            conf.set('Yun', 'app_edition', '3.4.5')
+            with open(cfg_path, 'w+', encoding='utf-8') as f:
+                conf.write(f)
+        #config app版本检查 当前可用3.4.5
+        
         print("确定数据无误：")
     print("Token: ".ljust(15) + my_token)
     print('deviceId: '.ljust(15) + my_device_id)
