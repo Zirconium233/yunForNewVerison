@@ -17,6 +17,10 @@ import gzip
 from tqdm import tqdm
 import argparse
 from tools.drift import add_drift
+from gmssl import sm4
+from Crypto.Util.Padding import pad, unpad
+import time
+from tools.Login import Login
 
 """
 加密模式：sm2非对称加密sm4密钥
@@ -48,6 +52,7 @@ def bytes_to_hex(input_string):
     return hex_string
 
 sm2_crypt = sm2.CryptSM2(public_key=bytes_to_hex(PUBLIC_KEY[1:]), private_key=bytes_to_hex(PRIVATE_KEY), mode=1, asn1=True)
+
 def encrypt_sm4(value, SM_KEY, isBytes = False):
     crypt_sm4 = CryptSM4()
     crypt_sm4.set_key(SM_KEY, SM4_ENCRYPT)
@@ -73,6 +78,7 @@ def decrypt_sm2(info):
     decode_info = b64decode(info)  # 通过base64解码成二进制bytes
     decode_info = sm2_crypt.decrypt(decode_info)
     return decode_info
+
 
 def getsign(utc, uuid):
     sb = (
@@ -121,6 +127,29 @@ def default_post(router, data, headers=None, m_host=None, isBytes=False, gen_sig
         return decrypt_sm4(req.text, b64decode(default_key)).decode()
     except:
         return req.text
+
+def noTokenLogin():
+    print("config中token为空，是否尝试使用账号密码登录？(y/n)")
+    LoginChoice = input()
+    if LoginChoice == 'y':
+        token,DeviceId,DeviceName,uuid,sys_edition = Login.main()
+        #TEST CONTENT
+        print("是否保存本次登录产生的token和uuid？(y/n)")
+        TokenWrite = input()
+        if TokenWrite == 'y':
+            config = configparser.ConfigParser()
+            config.read('config.ini', encoding='utf-8')
+            config.set('User', 'token', token)
+            config.set('User', 'uuid', uuid)
+            config.set('User', 'device_id', DeviceId)
+            config.set('User', 'device_name', DeviceName)
+            config.set('User', 'sys_edition', sys_edition)
+            with open('config.ini', 'w+', encoding='utf-8') as f:
+                config.write(f)
+        return token,DeviceId,DeviceName,uuid,sys_edition
+    elif LoginChoice == 'n':
+        print("由于缺少token退出")
+        exit()
 
 class Yun_For_New:
 
@@ -477,8 +506,8 @@ if __name__ == '__main__':
 
     # 学校、keys和版本信息
     my_host = conf.get("Yun", "school_host") # 学校的host
-    default_key = conf.get("Yun", "CipherKey") # 加密密钥
-    CipherKeyEncrypted = conf.get("Yun", "CipherKeyEncrypted") # 加密密钥的sm2加密版本
+    default_key = conf.get("Yun", "cipherkey") # 加密密钥
+    CipherKeyEncrypted = conf.get("Yun", "cipherkeyencrypted") # 加密密钥的sm2加密版本
     my_app_edition = conf.get("Yun", "app_edition") # app版本（我手机上是3.0.0）
 
     # 用户信息，包括设备信息
@@ -487,7 +516,7 @@ if __name__ == '__main__':
     my_key = conf.get("User", "map_key") # map_key是高德地图的开发者密钥
     my_device_name = conf.get("User", "device_name") # 手机名称
     my_sys_edition = conf.get("User", "sys_edition") # 安卓版本（大版本）
-    my_utc = conf.get("User", "utc")
+    my_utc = conf.get('User', 'utc') or str(int(time.time()))
     my_uuid = conf.get("User", "uuid")
     my_sign = conf.get("User", "sign")
 
@@ -511,6 +540,15 @@ if __name__ == '__main__':
     md5key = conf.get("Yun", "md5key")
     platform = conf.get("Yun", "platform")
     if not args.auto_run:
+        if len(conf.get('User', 'token')) == 0:
+            my_token,my_device_id,my_device_name,my_uuid,my_sys_edition = noTokenLogin()
+
+        if conf.get('Yun', 'app_edition') != '3.4.5':
+            conf.set('Yun', 'app_edition', '3.4.5')
+            with open(cfg_path, 'w+', encoding='utf-8') as f:
+                conf.write(f)
+        #config app版本检查 当前可用3.4.5
+        
         print("确定数据无误：")
     print("Token: ".ljust(15) + my_token)
     print('deviceId: '.ljust(15) + my_device_id)
@@ -519,6 +557,7 @@ if __name__ == '__main__':
     print('uuid: '.ljust(15) + my_uuid)
     print('sign: '.ljust(15) + my_sign)
     print('map_key: '.ljust(15) + my_key)
+
     if args.auto_run:
         sure = 'y'
     else:
