@@ -67,7 +67,7 @@ if __name__ == '__main__':
     print("对一个json的累计更改可能会导致路线鬼畜.")
     pos_choice = input("你需要修改哪一个校区tasklist？(1.翡翠湖 2.屯溪路 3.其他)")
 
-    path = "./tasks_fch" if pos_choice == "1" else "./tasks_txl" if pos_choice == "2" else "./tasks_else"
+    path = "./tasks_fch/" if pos_choice == "1" else "./tasks_txl/" if pos_choice == "2" else "./tasks_else/"
     chi = input("选择要更改的文件: ")
 
     FilePath = os.path.join(path, "tasklist_" + chi + ".json")
